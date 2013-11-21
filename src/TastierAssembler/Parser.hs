@@ -26,8 +26,11 @@ parseInstruction lineNumber text =
     ["Mul"]         -> Right $ I.Nullary I.Mul
     ["Div"]         -> Right $ I.Nullary I.Div
     ["Equ"]         -> Right $ I.Nullary I.Equ
+    ["Neq"]         -> Right $ I.Nullary I.Neq
     ["Lss"]         -> Right $ I.Nullary I.Lss
     ["Gtr"]         -> Right $ I.Nullary I.Gtr
+    ["Lte"]         -> Right $ I.Nullary I.Lte
+    ["Gte"]         -> Right $ I.Nullary I.Gte
     ["Neg"]         -> Right $ I.Nullary I.Neg
     ["Load", a, b]  ->
       let a' = B.readInteger a
