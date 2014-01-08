@@ -308,10 +308,28 @@ run = do
                           smem = (smem // [(rtp, (smem ! loadAddr))]) }
           run
 
-        Instructions.Sto    -> do --Store updates a variable in a calling frame
+        Instructions.LoadArray   -> do
+	  let lengths = getLengths a b dmem
+	      indexes = getIndexes rtp b smem
+	      offset = getOffset 0 b indexes lengths
+	      address = a + 1 + offset + b
+	  
+	  put $ machine { rpc = rpc + 1, smem = (smem // [(rtp-1, (dmem ! (address-3)))]) }
+	  run
+
+        Instructions.Sto   -> do --Store updates a variable in a calling frame
           let storeAddr = (followChain 0 a rbp smem) + 4 + b
           put $ machine { rpc = rpc + 1, rtp = rtp - 1,
                           smem = (smem // [(storeAddr, (smem ! (rtp-1)))]) }
+          run
+
+        Instructions.StoreArray   -> do
+          let lengths = getLengths a b dmem
+	      indexes = getIndexes rtp b smem
+	      offset = getOffset 0 b indexes lengths
+	      address = a + 1 + offset + b
+          
+	  put $ machine { rpc = rpc + 1, rtp = rtp-b-1, dmem = (dmem // [(address-3, (smem ! (rtp-b-1)))]) }
           run
 
         Instructions.Call   -> do
@@ -340,3 +358,27 @@ followChain limit n rbp smem =
   if n > limit then
     followChain limit (n-1) (smem ! (rbp+2)) smem
   else rbp
+
+{-
+-}
+
+getLengths :: Int16 -> Int16 -> (Array Int16 Int16) -> [Int16]
+getLengths address dimension dmem
+ | dimension == 0 = []
+ | otherwise      = [(dmem ! (address+dimension-3))] ++ getLengths address (dimension-1) dmem 
+
+getIndexes :: Int16 -> Int16 -> (Array Int16 Int16) -> [Int16]
+getIndexes rtp dimension smem
+ | dimension == 0 = []
+ | otherwise      = getIndexes rtp (dimension-1) smem ++ [smem ! (rtp-dimension)]
+
+getOffset :: Int16 -> Int16 -> [Int16] -> [Int16] -> Int16
+getOffset dimension dimensions indexes lengths
+ | dimension == dimensions = 0
+ | otherwise               = ( (indexes !! (fromIntegral dimension)) * (getNestedOffset (dimension-1) lengths) )
+                             + (getOffset (dimension+1) dimensions indexes lengths)
+
+getNestedOffset :: Int16 -> [Int16] -> Int16
+getNestedOffset dimension lengths
+ | dimension == -1 = 1
+ | otherwise       = (lengths !! (fromIntegral dimension)) * getNestedOffset (dimension-1) lengths
